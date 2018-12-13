@@ -1,15 +1,13 @@
 # author: Kris Zhang
-import sys
-sys.path.append('/mnt/kris/competition')
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import tensorflow as tf
 import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
 from keras.utils import to_categorical, Sequence, multi_gpu_model
 from keras import losses
-from bert.modeling import BertConfig, BertModel
-from bert.optimization import AdamWeightDecayOpt, StepPreTrainModelCheckpoint
+from .modeling import BertConfig, BertModel
+from .optimization import AdamWeightDecayOpt
+from .checkpoint import StepPreTrainModelCheckpoint
 
 
 class SampleSequence(Sequence):
@@ -146,15 +144,14 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
 
 
 if __name__ == "__main__":
-    from quora_insincere_questions.const import data_path, model_path
-    from bert.const import bert_data_path
+    from .const import bert_data_path, bert_model_path
 
     vocab_path = os.path.join(bert_data_path, 'vocab.txt')
     bert_config_file = os.path.join(bert_data_path, 'bert_config.json')
     bert_pretraining(
-        train_data_path=data_path,
+        train_data_path=bert_data_path,
         bert_config_file=bert_config_file,
-        save_path=model_path,
+        save_path=bert_model_path,
         val_batch_size=512
     )
 

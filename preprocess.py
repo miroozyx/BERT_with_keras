@@ -3,9 +3,9 @@ import os
 import spacy
 import numpy as np
 from keras.utils import to_categorical
-from bert.tokenization import FullTokenizer
+from .tokenization import FullTokenizer
 from keras_preprocessing.sequence import pad_sequences
-from bert.create_pretraining_data import create_training_instances_with_spacy, create_training_instances
+from .create_pretraining_data import create_training_instances_with_spacy, create_training_instances
 
 def create_pretraing_data_from_docs(docs, vocab_path, save_path, token_method='wordpiece',language='en',
                                     max_seq_length=128, dupe_factor=10, short_seq_prob=0.1, masked_lm_prob=0.15,
@@ -109,57 +109,13 @@ def create_pretraing_data_from_docs(docs, vocab_path, save_path, token_method='w
 
 
 if __name__ == "__main__":
-    import random
-    import pandas as pd
-    from quora_insincere_questions.const import data_path
-    from utils.const import vocab_path
+    from .const import bert_data_path
 
-    nlp = spacy.load('en')
-
-    print("[INFO] 加载训练和测试数据集...")
-    train = pd.read_csv(os.path.join(data_path, 'train.csv'))
-    test = pd.read_csv(os.path.join(data_path, 'test.csv'))
-
-    print("[INFO] 训练集文本分句...")
-    train_docments = train['question_text'].tolist()
-    train_sentences = []
-    train_nums = len(train_docments)
-    for i, text in enumerate(train_docments):
-        doc = nlp(text)
-        ss = [s.text for s in doc.sents]
-        if len(ss) > 1:
-            train_sentences.append(ss)
-        else:
-            if random.random() < 0.5:
-                train_sentences.append(ss)
-        if i > 1000:
-            break
-        if i % 100 == 0:
-            print("{}/{}--{:.2f}% train data is completed.".format(i, train_nums, i / train_nums * 100))
-
-    print("[INFO] 测试集文本分句...")
-    test_docments = test['question_text'].tolist()
-    test_sentences = []
-    test_nums = len(test_docments)
-    for i, text in enumerate(test_docments):
-        doc = nlp(text)
-        ss = [s.text for s in doc.sents]
-        if len(ss) > 1:
-            test_sentences.append(ss)
-        else:
-            if random.random() < 0.5:
-                test_sentences.append(ss)
-        if i > 1000:
-            break
-        if i % 100 == 0:
-            print("{}/{}--{:.2f}% test data is completed.".format(i, test_nums, i / test_nums * 100))
-
-    print("[INFO] 计算pretraining所需的数据...")
-    text_list = train_sentences + test_sentences
-
+    vocab_path = os.path.join(bert_data_path, 'vocab.txt')
+    text_list = [[],[]]
     create_pretraing_data_from_docs(text_list,
                                     vocab_path=vocab_path,
-                                    save_path=data_path,
+                                    save_path=bert_data_path,
                                     token_method='wordpiece',
                                     language='en',
                                     dupe_factor=10)
