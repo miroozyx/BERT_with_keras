@@ -12,6 +12,7 @@ from .checkpoint import StepPreTrainModelCheckpoint
 
 
 class SampleSequence(Sequence):
+    """generator for fitting to pre-training data"""
     def __init__(self, x, y, batch_size, vocab_size):
         self.x = x
         self.y = y
@@ -40,7 +41,9 @@ class SampleSequence(Sequence):
 
 def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32, epochs=2, seq_length=128,
                      max_predictions_per_seq=20, lr=5e-5,num_warmup_steps=10000, save_checkpoints_steps=1000,
-                     weight_decay_rate=0.01, validation_ratio=0.1, max_num_val=10000, multi_gpu=0, val_batch_size=None):
+                     weight_decay_rate=0.01, validation_ratio=0.1, max_num_val=10000, multi_gpu=0,
+                     val_batch_size=None, pretraining_model_file='bert_pretraining.h5',
+                     encoder_model_file='bert_encoder.h5'):
     '''masked LM/next sentence masked_lm pre-training for BERT.
 
     # Args
@@ -53,7 +56,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         seq_length: The maximum total input sequence length after tokenization.
             Sequences longer than this will be truncated, and sequences shorter
             than this will be padded. Must match data generation.
-        max_predictions_per_seq:
+        max_predictions_per_seq:Integer. Maximum number of masked LM predictions per sequence.
         lr: float >= 0. Learning rate.
         num_warmup_steps: Integer. Number of warm up steps.
         save_checkpoints_steps: Integer. interval of checkpoints. only enable after model is warmed up.
@@ -68,6 +71,9 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
             Controlling the argument can benefit the efficiency of validation process.
         multi_gpu: Integer. when multi_gpu > 0, cpu will be use to merge model trained in gpus.
         val_batch_size: Integer.  Number of samples used in validation step.
+            If `val_batch_size` is None, val_batch_size will be equal to `batch_size`.
+        pretraining_model_file: name of pretraining model file.
+        encoder_model_file: name of encoder model file.
     '''
     tokens_ids = np.load(os.path.join(train_data_path, 'tokens_ids.npy'))
     tokens_mask = np.load(os.path.join(train_data_path, 'tokens_mask.npy'))
@@ -87,6 +93,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     num_val = int(len(tokens_ids) * validation_ratio)
     if num_val > max_num_val:
         validation_ratio = max_num_val / len(tokens_ids)
+    # split data for train and valid
     sss = StratifiedShuffleSplit(n_splits=1, test_size=validation_ratio, random_state=12345)
     for train_index, test_index in sss.split(tokens_ids, is_random_next):
         train_tokens_ids, test_tokens_ids = tokens_ids[train_index], tokens_ids[test_index]
@@ -145,8 +152,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     if multi_gpu:
         checkpoint_model = pretraining_model
     checkpoint = StepPreTrainModelCheckpoint(
-        filepath="%s/best.h5" % (save_path),
-        monitor='val_acc',
+        filepath="%s/%s" % (save_path, pretraining_model_file),
         start_step=num_warmup_steps,
         period=save_checkpoints_steps,
         save_best_only=True,
@@ -168,15 +174,14 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
                          [test_masked_lm_label, test_is_random_next]),
     )
 
-    pretraining_model.load_weights("%s/best.h5" % (save_path))
+    pretraining_model.load_weights("%s/%s" % (save_path, pretraining_model_file))
     bert_model = bert.get_bert_encoder()
-    bert_model.save_weights("%s/bert_encoder_model.h5" % (save_path))
+    bert_model.save_weights("%s/%s" % (save_path, encoder_model_file))
 
 
 if __name__ == "__main__":
     from .const import bert_data_path, bert_model_path
 
-    vocab_path = os.path.join(bert_data_path, 'vocab.txt')
     bert_config_file = os.path.join(bert_data_path, 'bert_config.json')
     bert_pretraining(
         train_data_path=bert_data_path,

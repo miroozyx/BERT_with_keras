@@ -566,15 +566,23 @@ class BertModel(object):
         return self.sequence_output
 
     def get_all_encoder_layer(self):
+        """Gets all encoder layer output.
+        list of float Tensor of shape [batch_size, seq_length, hidden_size]"""
         return self.all_encoder_layers
 
     def get_embedding_output(self):
+        """Gets output of embedding layer.
+        float Tensor of shape [batch_size, seq_length, hidden_size"""
         return self.embedding_output
 
     def get_embedding_table(self):
+        """Gets embeddings of vocabulary.
+        float Tensor of shape [vocab_size, hidden_size]
+        """
         return self.embedding_table
 
     def get_bert_encoder(self):
+        """Gets bert encoder, which can encoder a sequence to a vector"""
         return self.bert_model
 
     def get_lm_model(self):
@@ -625,6 +633,7 @@ class BertModel(object):
         return self.lm_model
 
     def get_next_sentence_model(self):
+        """construct next sentence model for pretraining"""
         pooled_output = self.bert_model(self.inputs)
         pred = Dense(units=2,
                      activation='softmax',
@@ -634,6 +643,7 @@ class BertModel(object):
         return self.next_sentence_model
 
     def get_pretraining_model(self):
+        """construct model for pretraining"""
         positions_maxlen = self.max_predictions_per_seq
         positions_input = Input(shape=(positions_maxlen,), dtype='int32',name='masked_lm')
         lm_inputs = self.inputs + [positions_input]
@@ -644,14 +654,15 @@ class BertModel(object):
         predtraining_model = Model(inputs=lm_inputs, outputs=[lm_pred, next_sentence_pred])
         return predtraining_model
 
-    def get_classifer_model(self, ):
+    def get_classifer_model(self, num_classes):
+        """construct model for classify """
         bert_encoder = Dropout(self.config.hidden_dropout_prob)(self.pooled_output)
-        pred = Dense(units=2,
+        pred = Dense(units=num_classes,
                      activation='softmax',
                      kernel_initializer=initializers.truncated_normal(stddev=self.config.initializer_range),
                      )(bert_encoder)
         self.classifer_model = Model(inputs=self.inputs, outputs=pred)
-        return self.next_sentence_model
+        return self.classifer_model
 
 
 def gather_indexes(sequence_tensor, positions):

@@ -5,7 +5,7 @@ from keras.callbacks import Callback
 
 
 class StepPreTrainModelCheckpoint(Callback):
-    """Save the model after specified interval of steps..
+    """Save the model after specified interval of steps with 'val_acc' monitor.
 
         `filepath` can contain named formatting options,
         which will be filled the value of `step` and
@@ -39,11 +39,11 @@ class StepPreTrainModelCheckpoint(Callback):
             model: model used in validation.
         """
 
-    def __init__(self, filepath, monitor='val_loss', verbose=0,
+    def __init__(self, filepath,verbose=0,
                  save_best_only=False, save_weights_only=False,
-                 mode='auto', period=1, start_step=10000, val_batch_size=None, model=None):
+                 period=1, start_step=10000, val_batch_size=None, model=None):
         super(StepPreTrainModelCheckpoint, self).__init__()
-        self.monitor = monitor
+        self.monitor = 'val_acc'
         self.verbose = verbose
         self.filepath = filepath
         self.save_best_only = save_best_only
@@ -55,25 +55,8 @@ class StepPreTrainModelCheckpoint(Callback):
         self.val_batch_size = val_batch_size
         self.single_gpu_model = model
 
-        if mode not in ['auto', 'min', 'max']:
-            warnings.warn('ModelCheckpoint mode %s is unknown, '
-                          'fallback to auto mode.' % (mode),
-                          RuntimeWarning)
-            mode = 'auto'
-
-        if mode == 'min':
-            self.monitor_op = np.less
-            self.best = np.Inf
-        elif mode == 'max':
-            self.monitor_op = np.greater
-            self.best = -np.Inf
-        else:
-            if 'acc' in self.monitor or self.monitor.startswith('fmeasure'):
-                self.monitor_op = np.greater
-                self.best = -np.Inf
-            else:
-                self.monitor_op = np.less
-                self.best = np.Inf
+        self.monitor_op = np.greater
+        self.best = -np.Inf
 
     def set_model(self, model):
         if self.single_gpu_model is not None:
