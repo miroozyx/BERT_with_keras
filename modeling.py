@@ -228,6 +228,12 @@ class Embedding_Postprocessor(Layer):
 
 
 class MultiHeadAttentionLayer(Layer):
+    """
+    multi-head attention.
+    # References
+        - [Attention Is All You Need]
+          (https://arxiv.org/abs/1706.03762)
+    """
     def __init__(self,
                  num_attention_heads=8,
                  size_per_head=64,
