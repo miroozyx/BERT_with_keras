@@ -321,7 +321,29 @@ class MultiHeadAttentionLayer(Layer):
 
 
 class BertConfig(object):
-    """Configuration for 'BerModel'"""
+    """Configuration for 'BerModel'
+    Args:
+        vocab_size: Vocabulary size of `inputs_ids` in `BertModel`.
+        hidden_size: Size of the encoder layers and the pooler layer.
+        num_hidden_layers: Number of hidden layers in the Transformer encoder.
+        num_attention_heads: Number of attention heads for each attention layer in
+            the Transformer encoder.
+        intermediate_size: The size of the "intermediate" (i.e., feed-forward)
+            layer in the Transformer encoder.
+        hidden_act: The non-linear activation function (function or string) in the
+            encoder and pooler.
+        hidden_dropout_prob: The dropout probability for all fully connected
+            layers in the embeddings, encoder, and pooler.
+        attention_probs_dropout_prob: The dropout ratio for the attention
+            probabilities.
+        max_position_embeddings: The maximum sequence length that this model might
+            ever be used with. Typically set this to something large just in case
+            (e.g., 512 or 1024 or 2048).
+        type_vocab_size: The vocabulary size of the `token_type_ids` passed into
+            `BertModel`.
+        initializer_range: The stdev of the truncated_normal_initializer for
+            initializing all weight matrices.
+    """
     def __init__(self,
                  vocab_size,
                  hidden_size=768,
@@ -362,14 +384,34 @@ class BertConfig(object):
         return cls.from_dict(json.loads(text))
 
     def to_dict(self):
+        """Serializes this instance to a Python dictionary."""
         output = copy.deepcopy(self.__dict__)
         return output
 
     def to_json_string(self):
+        """Serializes this instance to a JSON string."""
         return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
 
 
 class BertModel(object):
+    """Build bert model.
+
+    Example usage:
+    ```python
+    # Already been converted into token ids
+    input_ids = np.array([[31, 51, 99], [15, 5, 0]])
+    input_mask = np.array([[1, 1, 1], [1, 1, 0]])
+    token_type_ids = [[0, 0, 1], [0, 2, 0]]
+    config = BertConfig(vocab_size=32000, hidden_size=512,
+        num_hidden_layers=8, num_attention_heads=6, intermediate_size=1024)
+    bert = BertModel(config=config, batch_size=32, seq_length=128,use_token_type=True, mask=True)
+    model = bert.get_bert_model
+    model.compile(...)
+    model.fit(x=[input_ids, input_mask, token_type_ids],
+              y=...)
+    ```
+
+    """
     def __init__(self,
                  config,
                  batch_size,
@@ -378,6 +420,19 @@ class BertModel(object):
                  use_token_type=False,
                  embeddings_matrix=None,
                  mask=False):
+        """ Constructor for BertModel
+
+        Args:
+            config: instance of BertConfig.
+            batch_size: Integer. Number of samples per gradient update.
+            seq_length: Integer. The maximum total input sequence length after tokenization.
+                Sequences longer than this will be truncated, and sequences shorter
+                than this will be padded. Must match data generation.
+            max_predictions_pre_seq: Integer. Maximum number of masked LM predictions per sequence.
+            use_token_type: Boolean. Whether of not use segmented id in model.
+            embeddings_matrix: initial embeddings weights.
+            mask: boolean. When mask is True. input of mask must be added to model inputs.
+        """
         if not isinstance(config, BertConfig):
             raise ValueError("`config` must be a instance of `BertConfig`.")
         config = copy.deepcopy(config)
