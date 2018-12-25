@@ -1,5 +1,6 @@
 # author: Kris Zhang
 import os
+import logging
 import tensorflow as tf
 import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -40,6 +41,34 @@ class SampleSequence(Sequence):
 def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32, epochs=2, seq_length=128,
                      max_predictions_per_seq=20, lr=5e-5,num_warmup_steps=10000, save_checkpoints_steps=1000,
                      weight_decay_rate=0.01, validation_ratio=0.1, max_num_val=10000, multi_gpu=0, val_batch_size=None):
+    '''masked LM/next sentence masked_lm pre-training for BERT.
+
+    # Args
+        train_data_path: dir of train data.
+        bert_config_file: The config json file corresponding to the pre-trained BERT model.
+            This specifies the model architecture.
+        save_path: dir to save checkpoints.
+        batch_size: Integer.  Number of samples per gradient update.
+        epochs: Integer. Number of epochs to train the model.
+        seq_length: The maximum total input sequence length after tokenization.
+            Sequences longer than this will be truncated, and sequences shorter
+            than this will be padded. Must match data generation.
+        max_predictions_per_seq:
+        lr: float >= 0. Learning rate.
+        num_warmup_steps: Integer. Number of warm up steps.
+        save_checkpoints_steps: Integer. interval of checkpoints. only enable after model is warmed up.
+        weight_decay_rate: float. value of weight decay rate.
+        validation_ratio:  Float between 0 and 1.
+            Fraction of the training data to be used as validation data.
+            The model will set apart this fraction of the training data,
+            will not train on it, and will evaluate
+            the loss and any model metrics.
+        max_num_val: Integer. max number of validation data.
+            when multi_gpu > 0, model will use cpu to evaluate validation data.
+            Controlling the argument can benefit the efficiency of validation process.
+        multi_gpu: Integer. when multi_gpu > 0, cpu will be use to merge model trained in gpus.
+        val_batch_size: Integer.  Number of samples used in validation step.
+    '''
     tokens_ids = np.load(os.path.join(train_data_path, 'tokens_ids.npy'))
     tokens_mask = np.load(os.path.join(train_data_path, 'tokens_mask.npy'))
     segment_ids = np.load(os.path.join(train_data_path, 'segment_ids.npy'))
@@ -49,8 +78,9 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
 
     num_train_samples = int(len(tokens_ids) * (1 - validation_ratio))
     num_train_steps = int(np.ceil(num_train_samples / batch_size)) * epochs
-    print('[INFO] train steps:', num_train_steps)
-    print("[INFO] train samples:", len(tokens_ids))
+
+    logging.info('train steps: {}'.format(num_train_steps))
+    logging.info('train samples: {}'.format(tokens_ids))
 
     config = BertConfig.from_json_file(bert_config_file)
 
@@ -70,7 +100,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         test_masked_lm_label = to_categorical(test_masked_lm_label, num_classes=config.vocab_size)
         test_masked_lm_label = test_masked_lm_label.reshape((-1, 20, config.vocab_size))
 
-    print("[INFO] 构建预训练神经网络...")
+    logging.info("build pretraining nnet...")
     adam = AdamWeightDecayOpt(
         lr=lr,
         num_train_steps=num_train_steps,
@@ -103,7 +133,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         pretraining_model.compile(optimizer=adam, loss=losses.categorical_crossentropy, metrics=['acc'],
                                   loss_weights=[0.5, 0.5])
 
-    print("[INFO] 训练神经网络 for {} epochs".format(epochs))
+    logging.info('training pretraining nnet for {} epochs'.format(epochs))
     train_sample_generator = SampleSequence(
         x=[train_tokens_ids, train_tokens_mask, train_segment_ids, train_masked_lm_positions],
         y=[train_masked_lm_label, train_is_random_next],
@@ -115,7 +145,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     if multi_gpu:
         checkpoint_model = pretraining_model
     checkpoint = StepPreTrainModelCheckpoint(
-        filepath="%s/best.hdf5" % (save_path),
+        filepath="%s/best.h5" % (save_path),
         monitor='val_acc',
         start_step=num_warmup_steps,
         period=save_checkpoints_steps,
