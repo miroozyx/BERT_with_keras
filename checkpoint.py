@@ -5,13 +5,13 @@ from keras.callbacks import Callback
 
 
 class StepPreTrainModelCheckpoint(Callback):
-    """Save the model after every epoch.
+    """Save the model after specified interval of steps..
 
         `filepath` can contain named formatting options,
-        which will be filled the value of `epoch` and
+        which will be filled the value of `step` and
         keys in `logs` (passed in `on_epoch_end`).
 
-        For example: if `filepath` is `weights.{batch:02d}-{val_loss:.2f}.hdf5`,
+        For example: if `filepath` is `weights.{step:02d}-{val_loss:.2f}.hdf5`,
         then the model checkpoints will be saved with the epoch number and
         the validation loss in the filename.
 

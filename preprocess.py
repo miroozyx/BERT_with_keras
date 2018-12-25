@@ -7,10 +7,26 @@ from .tokenization import FullTokenizer
 from keras_preprocessing.sequence import pad_sequences
 from .create_pretraining_data import create_training_instances_with_spacy, create_training_instances
 
-def create_pretraing_data_from_docs(docs, vocab_path, save_path, token_method='wordpiece',language='en',
+def create_pretraining_data_from_docs(docs, save_dir, vocab_path=None, token_method='wordpiece',language='en',
                                     max_seq_length=128, dupe_factor=10, short_seq_prob=0.1, masked_lm_prob=0.15,
                                     max_predictons_per_seq=20):
-    """docs: sequence of sequence of sentences."""
+    """docs: sequence of sequence of sentences.
+
+    Args:
+        docs: Sequence of sequence. Docs is a sequence of documents.
+            A document is a sequence of sentences.
+        save_path: dir to save pretraining data.
+        vocab_path: Defaults None. The vocabulary file that the BERT model was trained on.
+            only enable when token_method='wordpiece'.
+        token_method: string. 'wordpiece' or 'spacy'
+        language: string. 'en' or 'chn'
+        max_seq_length: integer. Maximum sequence length.
+        dupe_factor: integer. Number of times to duplicate the input data (with different masks).
+        short_seq_prob: float. Probability of creating sequences which are shorter than the maximum length.
+        masked_lm_prob: float. Masked LM probability.
+        max_predictons_per_seq: integer. Maximum number of masked LM predictions per sequence.
+    """
+
     if not hasattr(docs,'__len__'):
         raise ValueError("`docs` should be sequence of sequence.")
     else:
@@ -25,6 +41,8 @@ def create_pretraing_data_from_docs(docs, vocab_path, save_path, token_method='w
         raise ValueError("spacy tokenizer only enable when `language` is `en`.")
 
     if token_method == "wordpiece":
+        if vocab_path is None:
+            raise ValueError("`vocab_path` must be specified when token_method is `wordpiece`.")
         tokenizer = FullTokenizer(vocab_path, do_lower_case=True)
         instances = create_training_instances(docs,
                                               tokenizer=tokenizer,
@@ -96,12 +114,12 @@ def create_pretraing_data_from_docs(docs, vocab_path, save_path, token_method='w
     is_random_next = to_categorical(pretraining_data['is_random_next'], num_classes=2)
     masked_lm_labels = pad_sequences(masked_lm_ids, maxlen=20, padding='post', truncating='post')
     # save
-    np.save(os.path.join(save_path, 'tokens_ids.npy'), tokens_ids)
-    np.save(os.path.join(save_path, 'tokens_mask.npy'), tokens_mask)
-    np.save(os.path.join(save_path, 'segment_ids.npy'), segment_ids)
-    np.save(os.path.join(save_path, 'is_random_next.npy'), is_random_next)
-    np.save(os.path.join(save_path, 'masked_lm_positions.npy'), masked_lm_positions)
-    np.save(os.path.join(save_path, 'masked_lm_labels.npy'), masked_lm_labels)
+    np.save(os.path.join(save_dir, 'tokens_ids.npy'), tokens_ids)
+    np.save(os.path.join(save_dir, 'tokens_mask.npy'), tokens_mask)
+    np.save(os.path.join(save_dir, 'segment_ids.npy'), segment_ids)
+    np.save(os.path.join(save_dir, 'is_random_next.npy'), is_random_next)
+    np.save(os.path.join(save_dir, 'masked_lm_positions.npy'), masked_lm_positions)
+    np.save(os.path.join(save_dir, 'masked_lm_labels.npy'), masked_lm_labels)
     print("[INFO] number of train data:",len(tokens_ids))
     print("[INFO] is_random_next ratio:",np.sum(pretraining_data['is_random_next'])/len(is_random_next))
     if token_method == "spacy":
@@ -113,9 +131,9 @@ if __name__ == "__main__":
 
     vocab_path = os.path.join(bert_data_path, 'vocab.txt')
     text_list = [[],[]]
-    create_pretraing_data_from_docs(text_list,
+    create_pretraining_data_from_docs(text_list,
                                     vocab_path=vocab_path,
-                                    save_path=bert_data_path,
+                                    save_dir=bert_data_path,
                                     token_method='wordpiece',
                                     language='en',
                                     dupe_factor=10)

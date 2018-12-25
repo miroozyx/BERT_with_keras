@@ -501,7 +501,6 @@ class BertModel(object):
         # construct text encoder model
         self.bert_model = Model(inputs=self.inputs, outputs=self.pooled_output, name='bert_model')
 
-
     def get_pooled_output(self):
         return self.pooled_output
 
