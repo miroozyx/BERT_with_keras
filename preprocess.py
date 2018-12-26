@@ -82,13 +82,11 @@ def create_pretraining_data_from_docs(docs, save_dir, vocab_path=None, token_met
     for i, instance in enumerate(instances):
         if i < 10:
             print("num-{}: {}".format(i, instance))
-            pretraining_data['tokens'].append(instance.tokens)
-            pretraining_data['segment_ids'].append(instance.segment_ids)
-            pretraining_data['is_random_next'].append(int(instance.is_random_next))
-            pretraining_data['masked_lm_positions'].append(instance.masked_lm_positions)
-            pretraining_data['masked_lm_labels'].append(instance.masked_lm_labels)
-        else:
-            break
+        pretraining_data['tokens'].append(instance.tokens)
+        pretraining_data['segment_ids'].append(instance.segment_ids)
+        pretraining_data['is_random_next'].append(int(instance.is_random_next))
+        pretraining_data['masked_lm_positions'].append(instance.masked_lm_positions)
+        pretraining_data['masked_lm_labels'].append(instance.masked_lm_labels)
 
     tokens_ids = []
     tokens_mask = []
