@@ -40,10 +40,10 @@ class SampleSequence(Sequence):
 
 
 def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32, epochs=2, seq_length=128,
-                     max_predictions_per_seq=20, lr=5e-5,num_warmup_steps=10000, save_checkpoints_steps=1000,
+                     max_predictions_per_seq=20, lr=5e-5,num_warmup_steps=10000, checkpoints_interval_steps=1000,
                      weight_decay_rate=0.01, validation_ratio=0.1, max_num_val=10000, multi_gpu=0,
-                     val_batch_size=None, pretraining_model_file='bert_pretraining.h5',
-                     encoder_model_file='bert_encoder.h5'):
+                     val_batch_size=None, pretraining_model_name='bert_pretraining.h5',
+                     encoder_model_name='bert_encoder.h5'):
     '''masked LM/next sentence masked_lm pre-training for BERT.
 
     # Args
@@ -59,7 +59,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         max_predictions_per_seq:Integer. Maximum number of masked LM predictions per sequence.
         lr: float >= 0. Learning rate.
         num_warmup_steps: Integer. Number of warm up steps.
-        save_checkpoints_steps: Integer. interval of checkpoints. only enable after model is warmed up.
+        checkpoints_interval_steps: Integer. interval of checkpoints. only enable after model is warmed up.
         weight_decay_rate: float. value of weight decay rate.
         validation_ratio:  Float between 0 and 1.
             Fraction of the training data to be used as validation data.
@@ -72,8 +72,8 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         multi_gpu: Integer. when multi_gpu > 0, cpu will be use to merge model trained in gpus.
         val_batch_size: Integer.  Number of samples used in validation step.
             If `val_batch_size` is None, val_batch_size will be equal to `batch_size`.
-        pretraining_model_file: name of pretraining model file.
-        encoder_model_file: name of encoder model file.
+        pretraining_model_name: name of pretraining model file.
+        encoder_model_name: name of encoder model file.
     '''
     tokens_ids = np.load(os.path.join(train_data_path, 'tokens_ids.npy'))
     tokens_mask = np.load(os.path.join(train_data_path, 'tokens_mask.npy'))
@@ -126,7 +126,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
                      embeddings_matrix=None,
                      mask=True
                      )
-    if multi_gpu:
+    if multi_gpu > 1:
         # To avoid OOM errors, this model could have been built on CPU
         with tf.device('/cpu:0'):
             pretraining_model = bert.get_pretraining_model()
@@ -152,9 +152,9 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     if multi_gpu:
         checkpoint_model = pretraining_model
     checkpoint = StepPreTrainModelCheckpoint(
-        filepath="%s/%s" % (save_path, pretraining_model_file),
+        filepath="%s/%s" % (save_path, pretraining_model_name),
         start_step=num_warmup_steps,
-        period=save_checkpoints_steps,
+        period=checkpoints_interval_steps,
         save_best_only=True,
         verbose=1,
         val_batch_size=val_batch_size,
@@ -174,20 +174,38 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
                          [test_masked_lm_label, test_is_random_next]),
     )
 
-    pretraining_model.load_weights("%s/%s" % (save_path, pretraining_model_file))
+    pretraining_model.load_weights("%s/%s" % (save_path, pretraining_model_name))
     bert_model = bert.get_bert_encoder()
-    bert_model.save_weights("%s/%s" % (save_path, encoder_model_file))
+    bert_model.save_weights("%s/%s" % (save_path, encoder_model_name))
 
 
 if __name__ == "__main__":
-    from .const import bert_data_path, bert_model_path
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('train_data_path', help='dir of train data')
+    parser.add_argument('bert_config_file', help='The config json file corresponding to the pre-trained BERT model')
+    parser.add_argument('save_path', help='dir to save checkpoints')
+    parser.add_argument('--batch_size', default=32, help='Number of samples per gradient update.')
+    parser.add_argument('--epochs', default=2, help='Number of epochs to train the model')
+    parser.add_argument('--seq_length', default=128, help='he maximum total input sequence length after tokenization.')
+    parser.add_argument('--max_predictions_per_seq', default=20, help='Maximum number of masked LM predictions per sequence.')
+    parser.add_argument('--lr', default=5e-5, help='learning rate')
+    parser.add_argument('--num_warmup_steps', default=10000, help='number of warm up steps.')
+    parser.add_argument('--checkpoints_interval_steps', default=1000, help='interval steps of checkpoints')
+    parser.add_argument('--weight_decay_rate', default=0.01, help='value of weight decay rate.')
+    parser.add_argument('--validation_ratio', default=0.1, help='Fraction of the training data to be used as validation data')
+    parser.add_argument('--max_num_val', default=10000, help='max number of validation data.')
+    parser.add_argument('--multi_gpu', default=0, help='number of gpus used to train model.')
+    parser.add_argument('--val_batch_size', default=None, help='Number of samples used in validation step.')
+    parser.add_argument('--pretraining_model_name', default='bert_pretraining.h5')
+    parser.add_argument('--encoder_model_name', default='bert_encoder.h5')
+    parser.parse_args()
 
-    bert_config_file = os.path.join(bert_data_path, 'bert_config.json')
     bert_pretraining(
-        train_data_path=bert_data_path,
-        bert_config_file=bert_config_file,
-        save_path=bert_model_path,
-        val_batch_size=512
+        train_data_path=parser.train_data_path,
+        bert_config_file=parser.bert_config_file,
+        save_path=parser.save_path,
+        val_batch_size=parser.val_batch_size
     )
 
 
