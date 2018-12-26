@@ -126,7 +126,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
                      embeddings_matrix=None,
                      mask=True
                      )
-    if multi_gpu > 1:
+    if multi_gpu:
         # To avoid OOM errors, this model could have been built on CPU
         with tf.device('/cpu:0'):
             pretraining_model = bert.get_pretraining_model()
