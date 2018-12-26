@@ -6,9 +6,9 @@ import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
 from keras.utils import to_categorical, Sequence, multi_gpu_model
 from keras import losses
-from .modeling import BertConfig, BertModel
-from .optimization import AdamWeightDecayOpt
-from .checkpoint import StepPreTrainModelCheckpoint
+from modeling import BertConfig, BertModel
+from optimization import AdamWeightDecayOpt
+from checkpoint import StepPreTrainModelCheckpoint
 
 
 class SampleSequence(Sequence):
