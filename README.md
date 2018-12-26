@@ -3,8 +3,9 @@ This is a implementation of **BERT**(**B**idirectional **E**ncoder **R**epresent
 
 ## Usage
 
-Here is a quick-start example to preprocess raw data for pretraining.'
-Firs let's train a bert pre-training model.
+Here is a quick-start example to preprocess raw data for pretraining.
+
+First let's train a bert pre-training model.
 ```python
 import os
 import spacy
@@ -43,9 +44,9 @@ bert_pretraining(train_data_path=bert_data_path,
                  pretraining_model_name='bert_pretraining.h5',
                  encoder_model_name='bert_encoder.h5')
 ```
-Then, pertraining data would be found in save_dir.
-You can use the pre-training model as the initial point for your NLP model.
-For example, you can use the pre-training model to init a classfier model.
+Then, pertraining data would be found in save_dir. 
+You can use the pre-training model as the initial point for your NLP model. 
+For example, you can use the pre-training model to init a classfier model. 
 ```python
 import os
 from keras.layers import Input, Dropout, Dense
