@@ -43,6 +43,8 @@ bert_pretraining(train_data_path=bert_data_path,
                  max_predictions_per_seq=20,
                  val_batch_size=512,
                  multi_gpu=2,
+                 num_warmup_steps=1,
+                 checkpoints_interval_steps=1,
                  pretraining_model_name='bert_pretraining.h5',
                  encoder_model_name='bert_encoder.h5')
 ```
