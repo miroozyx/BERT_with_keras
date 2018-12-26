@@ -73,7 +73,7 @@ bert_encoder = Dropout(0.1)(pooled_output)
 pred = Dense(units=2,
              activation='softmax')(bert_encoder)
 model = Model(inputs=[input_ids, input_mask, input_token_type_ids], outputs=pred)
-model.complie(...)
+model.compile(...)
 model.fit(...)
 ```
 
