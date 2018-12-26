@@ -163,6 +163,10 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     checkpoint_model = None
     if multi_gpu:
         checkpoint_model = pretraining_model
+
+    if os.path.exists(save_path):
+        os.mkdir(save_path)
+
     checkpoint = StepPreTrainModelCheckpoint(
         filepath="%s/%s" % (save_path, pretraining_model_name),
         start_step=num_warmup_steps,
