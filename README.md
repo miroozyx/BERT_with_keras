@@ -22,7 +22,6 @@ texts =[
 'During the 1970s, many programmers began to write "conceptual ontologies", which structured real-world information into computer-understandable data. Examples are MARGIE (Schank, 1975), SAM (Cullingford, 1978), PAM (Wilensky, 1978), TaleSpin (Meehan, 1976), QUALM (Lehnert, 1977), Politics (Carbonell, 1979), and Plot Units (Lehnert 1981). During this time, many chatterbots were written including PARRY, Racter, and Jabberwacky',
 'Challenges in natural language processing frequently involve speech recognition, natural language understanding, and natural language generation',
 'Convert information from computer databases or semantic intents into readable human language.',
-'Convert information from computer databases or semantic intents into readable human language.',
 "Given two text fragments, determine if one being true entails the other, entails the other's negation, or allows the other to be either true or false.",
 'Extract subjective information usually from a set of documents, often using online reviews to determine "polarity" about specific objects. It is especially useful for identifying trends of public opinion in the social media, for the purpose of marketing',
 'Given a chunk of text, separate it into segments each of which is devoted to a topic, and identify the topic of the segment',
