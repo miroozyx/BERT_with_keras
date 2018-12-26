@@ -1,6 +1,7 @@
 # author: Kris Zhang
 import os
 import logging
+import warnings
 import tensorflow as tf
 import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -75,6 +76,10 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         pretraining_model_name: name of pretraining model file.
         encoder_model_name: name of encoder model file.
     '''
+    if multi_gpu > 0:
+        if not tf.test.is_gpu_available:
+            raise ValueError("GPU is not available. Set `multi_gpu` to be 0.")
+
     tokens_ids = np.load(os.path.join(train_data_path, 'tokens_ids.npy'))
     tokens_mask = np.load(os.path.join(train_data_path, 'tokens_mask.npy'))
     segment_ids = np.load(os.path.join(train_data_path, 'segment_ids.npy'))
@@ -87,6 +92,13 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
 
     logging.info('train steps: {}'.format(num_train_steps))
     logging.info('train samples: {}'.format(tokens_ids))
+    if num_train_steps < num_warmup_steps + checkpoints_interval_steps:
+        raise ValueError("number of train steps must be larger than the sum of"
+                         " `num_warmup_steps` and `checkpoints_interval_steps`."
+                         "enlarge your train data or reduce batch_size")
+    warmup_ratio = num_warmup_steps / num_train_steps
+    if warmup_ratio > 0.02:
+        warnings.warn("model performance may be suitable when warmup steps is 0.01~0.02 of train steps.", UserWarning)
 
     config = BertConfig.from_json_file(bert_config_file)
 
