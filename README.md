@@ -1,6 +1,8 @@
 # BERT_with_keras
 This is a implementation of **BERT**(**B**idirectional **E**ncoder **R**epresentation of **T**ransformer) with **Keras**.
 
+The backend of Keras must be tensorflow.
+
 ## Usage
 
 Here is a quick-start example to preprocess raw data for pretraining and fine-tuning.
