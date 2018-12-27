@@ -13,7 +13,7 @@ class StepPreTrainModelCheckpoint(Callback):
         keys in `logs` (passed in `on_epoch_end`).
 
         For example: if `filepath` is `weights.{step:02d}-{val_loss:.2f}.hdf5`,
-        then the model checkpoints will be saved with the epoch number and
+        then the model checkpoints will be saved with the step number and
         the validation loss in the filename.
 
         # Arguments
@@ -25,7 +25,7 @@ class StepPreTrainModelCheckpoint(Callback):
             save_weights_only: if True, then only the model's weights will be
                 saved (`model.save_weights(filepath)`), else the full model
                 is saved (`model.save(filepath)`).
-            period: Interval (number of epochs) between checkpoints.
+            period: Interval (number of steps) between checkpoints.
             start_step: steps to start checkpoint.
             val_batch_size: batch size used in validation.
             model: model used in validation.
@@ -123,7 +123,7 @@ class StepModelCheckpoint(Callback):
         keys in `logs` (passed in `on_epoch_end`).
 
         For example: if `filepath` is `weights.{step:02d}-{val_loss:.2f}.hdf5`,
-        then the model checkpoints will be saved with the epoch number and
+        then the model checkpoints will be saved with the step number and
         the validation loss in the filename.
 
         # Arguments
@@ -145,7 +145,7 @@ class StepModelCheckpoint(Callback):
                 be `min`, etc. In `auto` mode, the direction is
                 automatically inferred from the name of the monitored quantity.
             xlen: number of inputs in model.
-            period: Interval (number of epochs) between checkpoints.
+            period: Interval (number of steps) between checkpoints.
             start_step: steps to start checkpoint.
             val_batch_size: batch size used in validation.
             model: model used in validation.
@@ -266,7 +266,7 @@ class StepF1ModelCheckpoint(Callback):
     keys in `logs` (passed in `on_batch_end`).
 
     For example: if `filepath` is `weights.{step:07d}-{val_f1:.3f}-{threshold:.3f}.hdf5`,
-    then the model checkpoints will be saved with the epoch number and
+    then the model checkpoints will be saved with the step number and
     the validation loss in the filename.
 
     # Arguments
