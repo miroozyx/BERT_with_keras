@@ -224,11 +224,7 @@ class StepModelCheckpoint(Callback):
                             sample_weight=val_sample_weights,
                             verbose=0
                     )
-                    val_lm_model_acc  = val_outs[3]
-                    val_sentence_model_acc = val_outs[4]
-                    print("\nstep %07d: cur_lm_acc is %0.5f, cur_is_random_nex_acc is %0.5f"
-                          % (self.cur_step, val_lm_model_acc, val_sentence_model_acc))
-                    current = (val_lm_model_acc + val_sentence_model_acc) / 2
+                    current = val_outs[1]
                     # current = logs.get(self.monitor)
                     if current is None:
                         warnings.warn('Can save best model only with %s available, '
