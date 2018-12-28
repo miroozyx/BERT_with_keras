@@ -2,6 +2,7 @@
 
 import collections
 import unicodedata
+import spacy
 import tensorflow as tf
 
 
@@ -43,6 +44,48 @@ def whitespace_tokenize(text):
     return []
   tokens = text.split()
   return tokens
+
+
+class SpacyTokenizer(object):
+  """runs spacy's tokenizaition"""
+  def __init__(self, vocab_file, do_lower_case=True):
+    self.vocab = load_vocab(vocab_file)
+    self.do_lower_case = do_lower_case
+    self.inv_vocab = {v: k for k, v in self.vocab.items()}
+    self.tokenizer = spacy.load('en').tokenizer
+
+  def tokenize(self, text):
+    text = self._clean_text(text)
+    text = " ".join(whitespace_tokenize(text))
+    tokens = [token.text for token in self.tokenizer(text)]
+    if self.do_lower_case:
+      tokens = [token.lower() for token in tokens]
+    split_tokens = []
+    for token in tokens:
+      if token not in self.vocab:
+        split_tokens.append('[UNK]')
+      else:
+        split_tokens.append(token)
+    return split_tokens
+
+  def convert_tokens_to_ids(self, tokens):
+    return convert_by_vocab(self.vocab, tokens)
+
+  def convert_ids_to_tokens(self, ids):
+    return convert_by_vocab(self.inv_vocab, ids)
+
+  def _clean_text(self, text):
+    """Performs invalid character removal and whitespace cleanup on text."""
+    output = []
+    for char in text:
+      cp = ord(char)
+      if cp == 0 or cp == 0xfffd or _is_control(char):
+        continue
+      if _is_whitespace(char):
+        output.append(" ")
+      else:
+        output.append(char)
+    return "".join(output)
 
 
 class FullTokenizer(object):
