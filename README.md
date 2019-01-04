@@ -38,12 +38,12 @@ vocab_path = os.path.join(bert_data_path, 'vocab.txt')
 
 create_pretraining_data_from_docs(sentences_texts,
                                   vocab_path=vocab_path,
-                                  save_dir=bert_data_path,
+                                  save_path=os.path.join(bert_data_path,'pretraining_data.npz'),
                                   token_method='wordpiece',
                                   language='en',
                                   dupe_factor=10)
 
-bert_pretraining(train_data_path=bert_data_path,
+bert_pretraining(train_data_path=os.path.join(bert_data_path,'pretraining_data.npz'),
                  bert_config_file=os.path.join(bert_data_path, 'bert_config.json'),
                  save_path=bert_model_path,
                  batch_size=32,
@@ -69,13 +69,13 @@ from modeling import BertConfig, BertModel
 
 config = BertConfig.from_json_file(os.path.join(bert_data_path, 'bert_config.json'))
 bert = BertModel(config,
-                     batch_size=32,
-                     seq_length=128,
-                     max_predictions_per_seq=20,
-                     use_token_type=True,
-                     embeddings_matrix=None,
-                     mask=True
-                     )
+                 batch_size=32,
+                 seq_length=128,
+                 max_predictions_per_seq=20,
+                 use_token_type=True,
+                 embeddings_matrix=None,
+                 mask=True
+                 )
 bert_encoder = bert.get_bert_encoder()
 bert_encoder.load_weights(os.path.join(bert_model_path, 'bert_encoder.h5'))
 input_ids = Input(shape=(128,))
