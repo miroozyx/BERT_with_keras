@@ -48,7 +48,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     '''masked LM/next sentence masked_lm pre-training for BERT.
 
     # Args
-        train_data_path: dir of train data.
+        train_data_path: path of train data.
         bert_config_file: The config json file corresponding to the pre-trained BERT model.
             This specifies the model architecture.
         save_path: dir to save checkpoints.
@@ -79,13 +79,19 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     if multi_gpu > 0:
         if not tf.test.is_gpu_available:
             raise ValueError("GPU is not available. Set `multi_gpu` to be 0.")
-
-    tokens_ids = np.load(os.path.join(train_data_path, 'tokens_ids.npy'))
-    tokens_mask = np.load(os.path.join(train_data_path, 'tokens_mask.npy'))
-    segment_ids = np.load(os.path.join(train_data_path, 'segment_ids.npy'))
-    is_random_next = np.load(os.path.join(train_data_path, 'is_random_next.npy'))
-    masked_lm_positions = np.load(os.path.join(train_data_path, 'masked_lm_positions.npy'))
-    masked_lm_label = np.load(os.path.join(train_data_path, 'masked_lm_labels.npy'))
+    pre_training_data = np.load(train_data_path)
+    tokens_ids = pre_training_data['token_ids']
+    tokens_mask = pre_training_data['token_mask']
+    segment_ids = pre_training_data['segment_ids']
+    is_random_next = pre_training_data['is_random_next']
+    masked_lm_positions = pre_training_data['masked_lm_positions']
+    masked_lm_label = pre_training_data['masked_lm_labels']
+    # tokens_ids = np.load(os.path.join(train_data_path, 'tokens_ids.npy'))
+    # tokens_mask = np.load(os.path.join(train_data_path, 'tokens_mask.npy'))
+    # segment_ids = np.load(os.path.join(train_data_path, 'segment_ids.npy'))
+    # is_random_next = np.load(os.path.join(train_data_path, 'is_random_next.npy'))
+    # masked_lm_positions = np.load(os.path.join(train_data_path, 'masked_lm_positions.npy'))
+    # masked_lm_label = np.load(os.path.join(train_data_path, 'masked_lm_labels.npy'))
 
     num_train_samples = int(len(tokens_ids) * (1 - validation_ratio))
     num_train_steps = int(np.ceil(num_train_samples / batch_size)) * epochs
