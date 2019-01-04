@@ -7,7 +7,7 @@ from tokenization import FullTokenizer,SpacyTokenizer
 from keras_preprocessing.sequence import pad_sequences
 from create_pretraining_data import create_training_instances
 
-def create_pretraining_data_from_docs(docs, save_dir, vocab_path, token_method='wordpiece',language='en',
+def create_pretraining_data_from_docs(docs, save_path, vocab_path, token_method='wordpiece',language='en',
                                     max_seq_length=128, dupe_factor=10, short_seq_prob=0.1, masked_lm_prob=0.15,
                                     max_predictons_per_seq=20):
     """docs: sequence of sequence of sentences.
@@ -15,7 +15,7 @@ def create_pretraining_data_from_docs(docs, save_dir, vocab_path, token_method='
     Args:
         docs: Sequence of sequence. Docs is a sequence of documents.
             A document is a sequence of sentences.
-        save_path: dir to save pretraining data.
+        save_path: path to save pretraining data.
         vocab_path: The vocabulary file that the BERT model was trained on.
             only enable when token_method='wordpiece'.
         token_method: string. 'wordpiece' or 'spacy'
@@ -92,12 +92,19 @@ def create_pretraining_data_from_docs(docs, save_dir, vocab_path, token_method='
     masked_lm_labels = pad_sequences(masked_lm_ids, maxlen=20, padding='post', truncating='post')
 
     # save
-    np.save(os.path.join(save_dir, 'tokens_ids.npy'), tokens_ids)
-    np.save(os.path.join(save_dir, 'tokens_mask.npy'), tokens_mask)
-    np.save(os.path.join(save_dir, 'segment_ids.npy'), segment_ids)
-    np.save(os.path.join(save_dir, 'is_random_next.npy'), is_random_next)
-    np.save(os.path.join(save_dir, 'masked_lm_positions.npy'), masked_lm_positions)
-    np.save(os.path.join(save_dir, 'masked_lm_labels.npy'), masked_lm_labels)
+    np.savez(file=save_path,
+             tokens_ids = tokens_ids,
+             tokens_mask = tokens_mask,
+             segment_ids = segment_ids,
+             is_random_next = is_random_next,
+             masked_lm_positions = masked_lm_positions,
+             masked_lm_labels = masked_lm_labels)
+    # np.save(os.path.join(save_dir, 'tokens_ids.npy'), tokens_ids)
+    # np.save(os.path.join(save_dir, 'tokens_mask.npy'), tokens_mask)
+    # np.save(os.path.join(save_dir, 'segment_ids.npy'), segment_ids)
+    # np.save(os.path.join(save_dir, 'is_random_next.npy'), is_random_next)
+    # np.save(os.path.join(save_dir, 'masked_lm_positions.npy'), masked_lm_positions)
+    # np.save(os.path.join(save_dir, 'masked_lm_labels.npy'), masked_lm_labels)
     print("[INFO] number of train data:",len(tokens_ids))
     print("[INFO] is_random_next ratio:",np.sum(pretraining_data['is_random_next'])/len(is_random_next))
 
@@ -109,7 +116,7 @@ if __name__ == "__main__":
     text_list = [[],[]]
     create_pretraining_data_from_docs(text_list,
                                     vocab_path=vocab_path,
-                                    save_dir=bert_data_path,
+                                    save_path=os.path.join(bert_data_path, 'bert_pertraining_data.npz'),
                                     token_method='wordpiece',
                                     language='en',
                                     dupe_factor=10)
