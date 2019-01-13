@@ -129,6 +129,30 @@ def get_activation(activation_string):
     raise ValueError("Unsupported activation: %s" % act)
 
 
+class LayerNormalization(Layer):
+    def __init__(self, **kwargs):
+        self.supports_masking = True
+        super(LayerNormalization, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        self.scale = self.add_weight(shape=(input_shape[-1],),
+                                    initializer=initializers.get('ones'),
+                                    name='layer_norm')
+        self.bias = self.add_weight(shape=(input_shape[-1],),
+                                    initializer=initializers.get('zeros'),
+                                    name='bias')
+        super(LayerNormalization, self).build(input_shape)
+
+    def call(self, x, epsilon=1e-6):
+        mean = tf.reduce_mean(x, axis=[-1], keepdims=True)
+        variance = tf.reduce_mean(tf.square(x - mean), axis=[-1], keepdims=True)
+        norm_x = (x - mean) * tf.rsqrt(variance + epsilon)
+        return norm_x * self.scale + self.bias
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+
 class TensorAdd(Layer):
     '''ops: A+B'''
     def __init__(self, **kwargs):
@@ -525,7 +549,8 @@ class BertModel(object):
             )(attention_ouput)
             attention_ouput = Dropout(config.hidden_dropout_prob)(attention_ouput)
             attention_ouput = TensorAdd()([layer_input, attention_ouput])
-            attention_ouput = BatchNormalization(name="layer_norm" + "_" + str(layer_idx))(attention_ouput)
+            # attention_ouput = BatchNormalization(name="layer_norm" + "_" + str(layer_idx))(attention_ouput)
+            attention_ouput = LayerNormalization()(attention_ouput)
 
             # FFN
             intermediate_ouput = Dense(
@@ -539,7 +564,8 @@ class BertModel(object):
             )(intermediate_ouput)
             layer_output = Dropout(config.hidden_dropout_prob)(layer_output)
             layer_output = TensorAdd()([attention_ouput, layer_output])
-            layer_output = BatchNormalization(name="layer_norm" + "-" + str(layer_idx))(layer_output)
+            # layer_output = BatchNormalization(name="layer_norm" + "-" + str(layer_idx))(layer_output)
+            layer_output = LayerNormalization()(layer_output)
             prev_output = layer_output
             all_layer_outputs.append(layer_output)
 
@@ -607,7 +633,8 @@ class BertModel(object):
             activation=get_activation(config.hidden_act),
             kernel_initializer=initializers.truncated_normal(stddev=config.initializer_range),
         )(sequence_output)
-        sequence_output = BatchNormalization(name='layer_norm_lm')(sequence_output)
+        # sequence_output = BatchNormalization(name='layer_norm_lm')(sequence_output)
+        sequence_output = LayerNormalization()(sequence_output)
 
         sequence_att = Lambda(
             function=lambda x: K.dot(x[0], K.permute_dimensions(x[1], pattern=(1,0))),
