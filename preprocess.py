@@ -99,12 +99,7 @@ def create_pretraining_data_from_docs(docs, save_path, vocab_path, token_method=
              is_random_next = is_random_next,
              masked_lm_positions = masked_lm_positions,
              masked_lm_labels = masked_lm_labels)
-    # np.save(os.path.join(save_dir, 'tokens_ids.npy'), tokens_ids)
-    # np.save(os.path.join(save_dir, 'tokens_mask.npy'), tokens_mask)
-    # np.save(os.path.join(save_dir, 'segment_ids.npy'), segment_ids)
-    # np.save(os.path.join(save_dir, 'is_random_next.npy'), is_random_next)
-    # np.save(os.path.join(save_dir, 'masked_lm_positions.npy'), masked_lm_positions)
-    # np.save(os.path.join(save_dir, 'masked_lm_labels.npy'), masked_lm_labels)
+
     print("[INFO] number of train data:",len(tokens_ids))
     print("[INFO] is_random_next ratio:",np.sum(pretraining_data['is_random_next'])/len(is_random_next))
 
