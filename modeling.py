@@ -131,8 +131,8 @@ def get_activation(activation_string):
 
 class LayerNormalization(Layer):
     def __init__(self, **kwargs):
-        self.supports_masking = True
         super(LayerNormalization, self).__init__(**kwargs)
+        self.supports_masking = True
 
     def build(self, input_shape):
         self.scale = self.add_weight(shape=(input_shape[-1],),
@@ -156,8 +156,8 @@ class LayerNormalization(Layer):
 class TensorAdd(Layer):
     '''ops: A+B'''
     def __init__(self, **kwargs):
-        self.supports_masking = True
         super(TensorAdd, self).__init__(**kwargs)
+        self.supports_masking = True
 
     def compute_mask(self, inputs, mask=None):
         if mask is not None:
@@ -183,6 +183,7 @@ class Embedding_Postprocessor(Layer):
                  initializer_range=0.02,
                  max_position_embeddings=512,
                  **kwargs):
+        super(Embedding_Postprocessor, self).__init__(**kwargs)
         self.use_token_type = use_token_type
         # self.token_type_ids = token_type_ids
         self.token_type_vocab_size = token_type_vocab_size
@@ -190,7 +191,6 @@ class Embedding_Postprocessor(Layer):
         self.initializer_range = initializer_range
         self.max_position_embeddings = max_position_embeddings
         self.supports_masking = True
-        super(Embedding_Postprocessor, self).__init__(**kwargs)
 
     def build(self, input_shape):
         if self.use_token_type:
@@ -267,6 +267,7 @@ class MultiHeadAttentionLayer(Layer):
                  attention_probs_dropout_prob=0.0,
                  initializer_range=0.02,
                  **kwargs):
+        super(MultiHeadAttentionLayer, self).__init__(**kwargs)
         self.num_attention_heads = num_attention_heads
         self.size_per_head = size_per_head
         self.query_act = activations.get(query_act)
@@ -275,7 +276,7 @@ class MultiHeadAttentionLayer(Layer):
         self.attention_probs_dropout_prob = attention_probs_dropout_prob
         self.initializer_range = initializer_range
         self.supports_masking = True
-        super(MultiHeadAttentionLayer, self).__init__(**kwargs)
+
 
     def build(self, input_shape):
         assert  len(input_shape) == 2
