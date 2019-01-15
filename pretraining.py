@@ -14,11 +14,12 @@ from checkpoint import StepPreTrainModelCheckpoint
 
 class SampleSequence(Sequence):
     """generator for fitting to pre-training data"""
-    def __init__(self, x, y, batch_size, vocab_size):
+    def __init__(self, x, y, batch_size, vocab_size, max_predictions_per_seq=20):
         self.x = x
         self.y = y
         self.batch_size = batch_size
         self.vocab_size = vocab_size
+        self.max_predictions_per_seq = max_predictions_per_seq
         assert len(x) == 4
         assert len(y) == 2
 
@@ -35,7 +36,7 @@ class SampleSequence(Sequence):
         batch_y0 = self.y[0][idx * self.batch_size:(idx + 1) * self.batch_size]
         batch_y0 = batch_y0.reshape((-1))
         batch_y0 = to_categorical(batch_y0, num_classes=self.vocab_size)
-        batch_y0 = batch_y0.reshape((-1, 20, self.vocab_size))
+        batch_y0 = batch_y0.reshape((-1, self.max_predictions_per_seq, self.vocab_size))
         batch_y = [batch_y0, self.y[1][idx * self.batch_size:(idx + 1) * self.batch_size]]
         return (batch_x, batch_y)
 
@@ -44,7 +45,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
                      max_predictions_per_seq=20, lr=5e-5,num_warmup_steps=10000, checkpoints_interval_steps=1000,
                      weight_decay_rate=0.01, validation_ratio=0.1, max_num_val=10000, multi_gpu=0,
                      val_batch_size=None, pretraining_model_name='bert_pretraining.h5',
-                     encoder_model_name='bert_encoder.h5'):
+                     encoder_model_name='bert_encoder.h5', random_state=None):
     '''masked LM/next sentence masked_lm pre-training for BERT.
 
     # Args
@@ -75,6 +76,11 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
             If `val_batch_size` is None, val_batch_size will be equal to `batch_size`.
         pretraining_model_name: name of pretraining model file.
         encoder_model_name: name of encoder model file.
+        random_state : int, RandomState instance or None, optional (default=None)
+            If int, random_state is the seed used by the random number generator;
+            If RandomState instance, random_state is the random number generator;
+            If None, the random number generator is the RandomState instance used
+            by `np.random`.
     '''
     if multi_gpu > 0:
         if not tf.test.is_gpu_available:
@@ -86,12 +92,6 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     is_random_next = pre_training_data['is_random_next']
     masked_lm_positions = pre_training_data['masked_lm_positions']
     masked_lm_label = pre_training_data['masked_lm_labels']
-    # tokens_ids = np.load(os.path.join(train_data_path, 'tokens_ids.npy'))
-    # tokens_mask = np.load(os.path.join(train_data_path, 'tokens_mask.npy'))
-    # segment_ids = np.load(os.path.join(train_data_path, 'segment_ids.npy'))
-    # is_random_next = np.load(os.path.join(train_data_path, 'is_random_next.npy'))
-    # masked_lm_positions = np.load(os.path.join(train_data_path, 'masked_lm_positions.npy'))
-    # masked_lm_label = np.load(os.path.join(train_data_path, 'masked_lm_labels.npy'))
 
     num_train_samples = int(len(tokens_ids) * (1 - validation_ratio))
     num_train_steps = int(np.ceil(num_train_samples / batch_size)) * epochs
@@ -112,7 +112,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     if num_val > max_num_val:
         validation_ratio = max_num_val / len(tokens_ids)
     # split data for train and valid
-    sss = StratifiedShuffleSplit(n_splits=1, test_size=validation_ratio, random_state=12345)
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=validation_ratio, random_state=random_state)
     for train_index, test_index in sss.split(tokens_ids, is_random_next):
         train_tokens_ids, test_tokens_ids = tokens_ids[train_index], tokens_ids[test_index]
         train_tokens_mask, test_tokens_mask = tokens_mask[train_index], tokens_mask[test_index]
@@ -123,7 +123,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         train_masked_lm_label, test_masked_lm_label = masked_lm_label[train_index], masked_lm_label[test_index]
         test_masked_lm_label = test_masked_lm_label.reshape((-1))
         test_masked_lm_label = to_categorical(test_masked_lm_label, num_classes=config.vocab_size)
-        test_masked_lm_label = test_masked_lm_label.reshape((-1, 20, config.vocab_size))
+        test_masked_lm_label = test_masked_lm_label.reshape((-1, max_predictions_per_seq, config.vocab_size))
 
     logging.info("build pretraining nnet...")
     adam = AdamWeightDecayOpt(
@@ -163,7 +163,8 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         x=[train_tokens_ids, train_tokens_mask, train_segment_ids, train_masked_lm_positions],
         y=[train_masked_lm_label, train_is_random_next],
         batch_size=batch_size,
-        vocab_size=config.vocab_size
+        vocab_size=config.vocab_size,
+        max_predictions_per_seq=max_predictions_per_seq
     )
 
     checkpoint_model = None
