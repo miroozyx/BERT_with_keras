@@ -80,8 +80,8 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
         if not tf.test.is_gpu_available:
             raise ValueError("GPU is not available. Set `multi_gpu` to be 0.")
     pre_training_data = np.load(train_data_path)
-    tokens_ids = pre_training_data['token_ids']
-    tokens_mask = pre_training_data['token_mask']
+    tokens_ids = pre_training_data['tokens_ids']
+    tokens_mask = pre_training_data['tokens_mask']
     segment_ids = pre_training_data['segment_ids']
     is_random_next = pre_training_data['is_random_next']
     masked_lm_positions = pre_training_data['masked_lm_positions']
@@ -170,7 +170,7 @@ def bert_pretraining(train_data_path, bert_config_file, save_path, batch_size=32
     if multi_gpu:
         checkpoint_model = pretraining_model
 
-    if os.path.exists(save_path):
+    if not os.path.exists(save_path):
         os.mkdir(save_path)
 
     checkpoint = StepPreTrainModelCheckpoint(
