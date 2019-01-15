@@ -525,8 +525,7 @@ class BertModel(object):
                 max_position_embeddings=config.max_position_embeddings,
             )(self.embedding_output)
 
-
-        self.embedding_output = BatchNormalization(name="layer_norm_embeddings")(self.embedding_output)
+        self.embedding_output = LayerNormalization()(self.embedding_output)
         self.embedding_output = Dropout(config.hidden_dropout_prob)(self.embedding_output)
 
         # Run the stacked transformer.
@@ -549,7 +548,6 @@ class BertModel(object):
             )(attention_ouput)
             attention_ouput = Dropout(config.hidden_dropout_prob)(attention_ouput)
             attention_ouput = TensorAdd()([layer_input, attention_ouput])
-            # attention_ouput = BatchNormalization(name="layer_norm" + "_" + str(layer_idx))(attention_ouput)
             attention_ouput = LayerNormalization()(attention_ouput)
 
             # FFN
@@ -564,7 +562,6 @@ class BertModel(object):
             )(intermediate_ouput)
             layer_output = Dropout(config.hidden_dropout_prob)(layer_output)
             layer_output = TensorAdd()([attention_ouput, layer_output])
-            # layer_output = BatchNormalization(name="layer_norm" + "-" + str(layer_idx))(layer_output)
             layer_output = LayerNormalization()(layer_output)
             prev_output = layer_output
             all_layer_outputs.append(layer_output)
@@ -633,7 +630,6 @@ class BertModel(object):
             activation=get_activation(config.hidden_act),
             kernel_initializer=initializers.truncated_normal(stddev=config.initializer_range),
         )(sequence_output)
-        # sequence_output = BatchNormalization(name='layer_norm_lm')(sequence_output)
         sequence_output = LayerNormalization()(sequence_output)
 
         sequence_att = Lambda(
