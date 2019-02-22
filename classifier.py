@@ -262,7 +262,7 @@ def convert_examples_to_features(examples, label_list, max_seq_length, tokenizer
     return features
 
 
-def save_features(features, save_dir, input_ids_file='input_ids.npy',
+def save_features(features, save_dir=None, input_ids_file='input_ids.npy',
                   input_mask_file='input_mask.npy', segment_ids_file='segment_ids.npy',
                   label_ids_file='label_ids.npy'):
     input_ids = []
@@ -275,14 +275,21 @@ def save_features(features, save_dir, input_ids_file='input_ids.npy',
         segment_ids.append(feature.segment_ids)
         label_ids.append(feature.label_id)
 
-    np.save(os.path.join(save_dir, input_ids_file), input_ids)
-    np.save(os.path.join(save_dir, input_mask_file), input_mask)
-    np.save(os.path.join(save_dir, segment_ids_file), segment_ids)
-    np.save(os.path.join(save_dir, label_ids_file), label_ids)
+    if save_dir is not None:
+        np.save(os.path.join(save_dir, input_ids_file), input_ids)
+        np.save(os.path.join(save_dir, input_mask_file), input_mask)
+        np.save(os.path.join(save_dir, segment_ids_file), segment_ids)
+        np.save(os.path.join(save_dir, label_ids_file), label_ids)
+    else:
+        features_array_dict = dict(input_ids = np.asarray(input_ids),
+                                   input_mask = np.asarray(input_mask),
+                                   segment_ids = np.asarray(segment_ids),
+                                   label_ids = np.asarray(label_ids))
+        return features_array_dict
 
 
 class text_classifier(object):
-    def __init__(self, bert_config, pretrain_model, batch_size, seq_length, optimizer, num_classes,
+    def __init__(self, bert_config, pretrain_model_path, batch_size, seq_length, optimizer, num_classes,
                  use_token_type=True, mask=True, max_predictions_per_seq=20, multi_gpu=None):
         if not isinstance(bert_config, BertConfig):
             raise ValueError("`bert_config` must be a instance of `BertConfig`")
@@ -300,17 +307,17 @@ class text_classifier(object):
 
         if multi_gpu:
             with tf.device('/cpu:0'):
-                model = self._build_model(pretrain_model)
+                model = self._build_model(pretrain_model_path)
                 model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy)
             parallel_model = multi_gpu_model(model=model, gpus=multi_gpu)
             parallel_model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy)
         else:
-            model = self._build_model(pretrain_model)
+            model = self._build_model(pretrain_model_path)
             model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy)
 
         self.estimator = model
         if multi_gpu:
-            self.estimator = model
+            self.estimator = parallel_model
 
     def fit(self, x, y, epochs, shuffle=True, callbacks=None, validation_split=0., validation_data=None,
             class_weight=None, sample_weight=None, **kwargs):
