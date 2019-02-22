@@ -5,7 +5,52 @@ The backend of Keras must be **tensorflow**.
 
 ## Usage
 
-Here is a quick-start example to preprocess raw data for pretraining and fine-tuning.
+Here is a quick-start example to preprocess raw data for pretraining and fine-tuning for text classification.
+
+### Data
+Let's use Standord's Large Movie Review Dataset for **BERT** pretraining and fine-tuning, the code below, which downloads,extracts and imports the dateset, is 
+borrowed from this [tensorflow tutorial](https://www.tensorflow.org/hub/tutorials/text_classification_with_tf_hub). The
+dataset consists of IMDB movie reviews labeled by positivity from 1 to 10.
+```python
+import os
+import re
+import tensorflow as tf
+import pandas as pd
+
+# Load all files from a directory in a DataFrame.
+def load_directory_data(directory):
+    data = {}
+    data["sentence"] = []
+    data["sentiment"] = []
+    for file_path in os.listdir(directory):
+        with tf.gfile.GFile(os.path.join(directory, file_path), "r") as f:
+            data["sentence"].append(f.read())
+            data["sentiment"].append(re.match("\d+_(\d+)\.txt", file_path).group(1))
+    return pd.DataFrame.from_dict(data)
+
+# Merge positive and negative examples, add a polarity column and shuffle.
+def load_dataset(directory):
+    pos_df = load_directory_data(os.path.join(directory, "pos"))
+    neg_df = load_directory_data(os.path.join(directory, "neg"))
+    pos_df["polarity"] = 1
+    neg_df["polarity"] = 0
+    return pd.concat([pos_df, neg_df]).sample(frac=1).reset_index(drop=True)
+
+# Download and process the dataset files.
+def download_and_load_datasets(force_download=False):
+    dataset = tf.keras.utils.get_file(
+        fname="aclImdb.tar.gz", 
+        origin="http://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz", 
+        extract=True)
+  
+    train_df = load_dataset(os.path.join(os.path.dirname(dataset), 
+                                         "aclImdb", "train"))
+    test_df = load_dataset(os.path.join(os.path.dirname(dataset), 
+                                          "aclImdb", "test"))
+    return train_df, test_df
+ 
+train, test = download_and_load_datasets()
+```
 
 ### pre-training
 
@@ -17,18 +62,10 @@ from const import bert_data_path,bert_model_path
 from preprocess import create_pretraining_data_from_docs
 from pretraining import bert_pretraining
 nlp = spacy.load('en')
-texts =[
-'The history of natural language processing generally started in the 1950s, although work can be found from earlier periods. In 1950, Alan Turing published an article titled "Intelligence" which proposed what is now called the Turing test as a criterion of intelligence.',
-'The Georgetown experiment in 1954 involved fully automatic translation of more than sixty Russian sentences into English. The authors claimed that within three or five years, machine translation would be a solved problem.[2] However, real progress was much slower, and after the ALPAC report in 1966, which found that ten-year-long research had failed to fulfill the expectations, funding for machine translation was dramatically reduced. Little further research in machine translation was conducted until the late 1980s, when the first statistical machine translation systems were developed',
-'Some notably successful natural language processing systems developed in the 1960s were SHRDLU, a natural language system working in restricted "blocks worlds" with restricted vocabularies, and ELIZA, a simulation of a Rogerian psychotherapist, written by Joseph Weizenbaum between 1964 and 1966. Using almost no information about human thought or emotion, ELIZA sometimes provided a startlingly human-like interaction. When the "patient" exceeded the very small knowledge base, ELIZA might provide a generic response, for example, responding to "My head hurts" with "Why do you say your head hurts?"',
-'During the 1970s, many programmers began to write "conceptual ontologies", which structured real-world information into computer-understandable data. Examples are MARGIE (Schank, 1975), SAM (Cullingford, 1978), PAM (Wilensky, 1978), TaleSpin (Meehan, 1976), QUALM (Lehnert, 1977), Politics (Carbonell, 1979), and Plot Units (Lehnert 1981). During this time, many chatterbots were written including PARRY, Racter, and Jabberwacky',
-'Challenges in natural language processing frequently involve speech recognition, natural language understanding, and natural language generation',
-'Convert information from computer databases or semantic intents into readable human language.',
-"Given two text fragments, determine if one being true entails the other, entails the other's negation, or allows the other to be either true or false.",
-'Extract subjective information usually from a set of documents, often using online reviews to determine "polarity" about specific objects. It is especially useful for identifying trends of public opinion in the social media, for the purpose of marketing',
-'Given a chunk of text, separate it into segments each of which is devoted to a topic, and identify the topic of the segment',
-'Many words have more than one meaning; we have to select the meaning which makes the most sense in context. For this problem, we are typically given a list of words and associated word senses, e.g. from a dictionary or from an online resource such as WordNet.',
-]
+
+# use IMDB movie review as pretraining data
+texts = train['sentence'].tolist() + test['sentence'].tolist()
+
 sentences_texts=[]
 for text in texts:
     doc = nlp(text)
@@ -62,32 +99,78 @@ You can use the pre-training model as the initial point for your NLP model.
 For example, you can use the pre-training model to init a classfier model. 
 ```python
 import os
-from keras.layers import Input, Dropout, Dense
-from keras.models import Model
+import numpy as np
 from const import bert_data_path, bert_model_path
-from modeling import BertConfig, BertModel
+from modeling import BertConfig
+from classifier import SingleSeqDataProcessor, convert_examples_to_features, text_classifier, save_features
+from tokenization import FullTokenizer
+from optimization import AdamWeightDecayOpt
+from checkpoint import StepModelCheckpoint
 
+# data preprossing
+train_examples = SingleSeqDataProcessor.get_train_examples(train_data=train['sentence'],labels=train['polarity'])
+dev_exmaples = SingleSeqDataProcessor.get_dev_examples(dev_data=test['sentence'], labels=test['polarity'])
+
+vocab_path = os.path.join(bert_data_path, 'vocab.txt')
+tokenizer = FullTokenizer(vocab_path, do_lower_case=True)
+
+train_features = convert_examples_to_features(train_examples, 
+                                              label_list=[0,1], 
+                                              max_seq_length=128, 
+                                              tokenizer= tokenizer)
+dev_features = convert_examples_to_features(dev_exmaples, label_list=[0,1], max_seq_length=128, tokenizer=tokenizer)
+
+train_features_array_dict = save_features(features=train_features)
+dev_features_array_dict = save_features(features=dev_features)
+
+train_x = [train_features_array_dict['input_ids'], train_features_array_dict['input_mask'], train_features_array_dict['segment_ids']]
+trian_y = train_features_array_dict['label_ids']
+val_x = [dev_features_array_dict['input_ids'], dev_features_array_dict['input_mask'], dev_features_array_dict['segment_ids']]
+val_y = dev_features_array_dict['label_ids']
+
+# args
 config = BertConfig.from_json_file(os.path.join(bert_data_path, 'bert_config.json'))
-bert = BertModel(config,
-                 batch_size=32,
-                 seq_length=128,
-                 max_predictions_per_seq=20,
-                 use_token_type=True,
-                 embeddings_matrix=None,
-                 mask=True
-                 )
-bert_encoder = bert.get_bert_encoder()
-bert_encoder.load_weights(os.path.join(bert_model_path, 'bert_encoder.h5'))
-input_ids = Input(shape=(128,))
-input_mask = Input(shape=(128,))
-input_token_type_ids = Input(shape=(128,))
-pooled_output = bert_encoder([input_ids, input_mask, input_token_type_ids])
-bert_encoder = Dropout(0.1)(pooled_output)
-pred = Dense(units=2,
-             activation='softmax')(bert_encoder)
-model = Model(inputs=[input_ids, input_mask, input_token_type_ids], outputs=pred)
-model.compile(...)
-model.fit(...)
+epochs = 3
+batch_size = 32
+
+num_train_samples = len(train_features_array_dict['input_ids'])
+num_train_steps = int(np.ceil(num_train_samples / batch_size)) * epochs
+
+adam = AdamWeightDecayOpt(
+        lr=5e-5,
+        num_train_steps=num_train_steps,
+        num_warmup_steps=4000,
+        beta_1=0.9,
+        beta_2=0.999,
+        epsilon=1e-6,
+        weight_decay_rate=0.01,
+        exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"]
+    )
+    
+checkpoint = StepModelCheckpoint(filepath="%s/%s" % (bert_model_path, 'classifer_model.h5'),
+                                 verbose=1, monitor='val_acc',
+                                 save_best_only=True,
+                                 xlen=3,
+                                 period=1000,
+                                 start_step=4000,
+                                 val_batch_size=128)
+# create a model
+classifier = text_classifier(bert_config=config,
+                             pretrain_model_path=os.path.join(bert_model_path, 'bert_encoder.h5'),
+                             batch_size=batch_size,
+                             seq_length=128,
+                             optimizer=adam,
+                             num_classes=2
+                             )
+# train model
+history = classifier.fit(x=train_x,
+                         y=train_y,
+                         epochs=epochs,
+                         shuffle=True,
+                         callbacks=[checkpoint],
+                         validation_data=(val_x,val_y)
+                         )
+                   
 ```
 
 
