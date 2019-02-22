@@ -6,6 +6,7 @@ The backend of Keras must be **tensorflow**.
 ## Usage
 
 Here is a quick-start example to preprocess raw data for pretraining and fine-tuning for text classification.
+For more details, see [Predicting Movie Review Sentriment with BERT]()
 
 ### Data
 Let's use Standord's Large Movie Review Dataset for **BERT** pretraining and fine-tuning, the code below, which downloads,extracts and imports the dateset, is 
@@ -88,8 +89,8 @@ bert_pretraining(train_data_path=os.path.join(bert_data_path,'pretraining_data.n
                  max_predictions_per_seq=20,
                  val_batch_size=32,
                  multi_gpu=0,
-                 num_warmup_steps=1,
-                 checkpoints_interval_steps=1,
+                 num_warmup_steps=1000,
+                 checkpoints_interval_steps=1000,
                  pretraining_model_name='bert_pretraining.h5',
                  encoder_model_name='bert_encoder.h5')
 ```
@@ -108,8 +109,8 @@ from optimization import AdamWeightDecayOpt
 from checkpoint import StepModelCheckpoint
 
 # data preprossing
-train_examples = SingleSeqDataProcessor.get_train_examples(train_data=train['sentence'],labels=train['polarity'])
-dev_exmaples = SingleSeqDataProcessor.get_dev_examples(dev_data=test['sentence'], labels=test['polarity'])
+train_examples = SingleSeqDataProcessor.get_train_examples(train_data=train['sentence'].tolist(),labels=train['polarity'].tolist())
+dev_exmaples = SingleSeqDataProcessor.get_dev_examples(dev_data=test['sentence'].tolist(), labels=test['polarity'].tolist())
 
 vocab_path = os.path.join(bert_data_path, 'vocab.txt')
 tokenizer = FullTokenizer(vocab_path, do_lower_case=True)
@@ -124,7 +125,7 @@ train_features_array_dict = save_features(features=train_features)
 dev_features_array_dict = save_features(features=dev_features)
 
 train_x = [train_features_array_dict['input_ids'], train_features_array_dict['input_mask'], train_features_array_dict['segment_ids']]
-trian_y = train_features_array_dict['label_ids']
+train_y = train_features_array_dict['label_ids']
 val_x = [dev_features_array_dict['input_ids'], dev_features_array_dict['input_mask'], dev_features_array_dict['segment_ids']]
 val_y = dev_features_array_dict['label_ids']
 
