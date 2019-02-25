@@ -2,7 +2,7 @@
 import os
 import numpy as np
 import tensorflow as tf
-from keras.utils import multi_gpu_model
+from keras.utils import multi_gpu_model, Sequence
 from keras import initializers, losses
 from keras.models import Model
 from keras.layers import Dense, Dropout, Input
@@ -288,8 +288,34 @@ def save_features(features, save_dir=None, input_ids_file='input_ids.npy',
         return features_array_dict
 
 
-class text_classifier(object):
-    def __init__(self, bert_config, pretrain_model_path, batch_size, seq_length, optimizer, num_classes,
+class TextSequence(Sequence):
+    """generator to fit a sequence of text"""
+    def  __init__(self, x, y, batch_size):
+        if isinstance(x, list):
+            if len(x) == 1:
+                x = x[0]
+        self.x = x
+        self.y = y
+        self.batch_size = batch_size
+
+    def __len__(self):
+        if isinstance(self.x, list):
+            return int(np.ceil(len(self.x[0])) / float(self.batch_size))
+        return int(np.ceil(len(self.x)) / float(self.batch_size))
+
+    def __getitem__(self, idx):
+        if isinstance(self.x, list):
+            batch_x = []
+            for input_x in self.x:
+                batch_x.append(input_x[idx * self.batch_size : (idx+1) * self.batch_size])
+        else:
+            batch_x = self.x[idx * self.batch_size : (idx+1) * self.batch_size]
+        batch_y = self.y[idx * self.batch_size : (idx+1) * self.batch_size]
+        return (batch_x, batch_y)
+
+
+class Text_Classifier(object):
+    def __init__(self, bert_config, pretrain_model_path, batch_size, seq_length, optimizer, num_classes, metrics=None,
                  use_token_type=True, mask=True, max_predictions_per_seq=20, multi_gpu=None):
         if not isinstance(bert_config, BertConfig):
             raise ValueError("`bert_config` must be a instance of `BertConfig`")
@@ -308,30 +334,44 @@ class text_classifier(object):
         if multi_gpu:
             with tf.device('/cpu:0'):
                 model = self._build_model(pretrain_model_path)
-                model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy)
+                model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy, metrics=metrics)
             parallel_model = multi_gpu_model(model=model, gpus=multi_gpu)
-            parallel_model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy)
+            parallel_model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy, metrics=metrics)
         else:
             model = self._build_model(pretrain_model_path)
-            model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy)
+            model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy, metrics=metrics)
 
         self.estimator = model
         if multi_gpu:
             self.estimator = parallel_model
 
+    def fit_generator(self, generator, epochs, shuffle=True, callbacks=None, validation_data=None,
+            class_weight=None, workers=1, use_multiprocessing=False, initial_epoch=0):
+        return  self.estimator.fit_generator(
+            generator=generator,
+            epochs=epochs,
+            callbacks=callbacks,
+            validation_data=validation_data,
+            class_weight=class_weight,
+            workers=workers,
+            use_multiprocessing=use_multiprocessing,
+            shuffle=shuffle,
+            initial_epoch=initial_epoch
+        )
+
     def fit(self, x, y, epochs, shuffle=True, callbacks=None, validation_split=0., validation_data=None,
             class_weight=None, sample_weight=None, **kwargs):
-        self.estimator.fit(x=x,
-                           y=y,
-                           batch_size=self.batch_size,
-                           epochs=epochs,
-                           shuffle=shuffle,
-                           callbacks=callbacks,
-                           validation_split=validation_split,
-                           validation_data=validation_data,
-                           class_weight=class_weight,
-                           sample_weight=sample_weight,
-                           **kwargs)
+        return  self.estimator.fit(x=x,
+                                   y=y,
+                                   batch_size=self.batch_size,
+                                   epochs=epochs,
+                                   shuffle=shuffle,
+                                   callbacks=callbacks,
+                                   validation_split=validation_split,
+                                   validation_data=validation_data,
+                                   class_weight=class_weight,
+                                   sample_weight=sample_weight,
+                                   **kwargs)
 
     def predict(self, x,
                 batch_size=None,
