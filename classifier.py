@@ -6,7 +6,7 @@ from keras.utils import multi_gpu_model, Sequence
 from keras import initializers, losses
 from keras.models import Model
 from keras.layers import Dense, Dropout, Input
-from modeling import BertConfig, BertModel
+from .modeling import BertConfig, BertModel
 
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
@@ -300,8 +300,8 @@ class TextSequence(Sequence):
 
     def __len__(self):
         if isinstance(self.x, list):
-            return int(np.ceil(len(self.x[0])) / float(self.batch_size))
-        return int(np.ceil(len(self.x)) / float(self.batch_size))
+            return int(np.ceil(len(self.x[0]) / float(self.batch_size)))
+        return int(np.ceil(len(self.x) / float(self.batch_size)))
 
     def __getitem__(self, idx):
         if isinstance(self.x, list):

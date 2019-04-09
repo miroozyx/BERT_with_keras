@@ -3,9 +3,9 @@ import os
 import spacy
 import numpy as np
 from keras.utils import to_categorical
-from tokenization import FullTokenizer,SpacyTokenizer
+from .tokenization import FullTokenizer,SpacyTokenizer
 from keras_preprocessing.sequence import pad_sequences
-from create_pretraining_data import create_training_instances
+from .create_pretraining_data import create_training_instances
 
 def create_pretraining_data_from_docs(docs, save_path, vocab_path, token_method='wordpiece',language='en',
                                     max_seq_length=128, dupe_factor=10, short_seq_prob=0.1, masked_lm_prob=0.15,
