@@ -640,8 +640,8 @@ class BertModel(object):
 
         class AddBiasSoftmax(Layer):
             def __init__(self, **kwargs):
-                self.supports_masking=True
                 super(AddBiasSoftmax, self).__init__(**kwargs)
+                self.supports_masking=True
 
             def build(self, input_shape):
                 self.bias = self.add_weight(shape=(input_shape[-1],),
