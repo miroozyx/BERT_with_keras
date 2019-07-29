@@ -305,7 +305,7 @@ class MultiHeadAttentionLayer(Layer):
             mask = mask[0]
         return mask
 
-    def call(self, inputs, mask=None):
+    def call(self, inputs, mask=None, training=None):
         assert len(inputs) == 2
         query = K.bias_add(K.dot(inputs[0], self.W_query), self.bias_query)
         if self.query_act is not None:
@@ -339,7 +339,10 @@ class MultiHeadAttentionLayer(Layer):
             attention_scores += adder
 
         attention_probs = K.softmax(attention_scores, axis=-1)
-        attention_probs = K.dropout(attention_probs, self.attention_probs_dropout_prob)
+        if 0. < self.attention_probs_dropout_prob < 1.:
+            def dropped_inputs():
+                return K.dropout(attention_probs, self.attention_probs_dropout_prob)
+            attention_probs = K.in_train_phase(dropped_inputs, inputs, training=training)
 
         context = K.batch_dot(attention_probs, value, axes=(3,2))
         context = K.permute_dimensions(context, pattern=(0,2,1,3))
