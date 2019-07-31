@@ -342,7 +342,7 @@ class MultiHeadAttentionLayer(Layer):
         if 0. < self.attention_probs_dropout_prob < 1.:
             def dropped_inputs():
                 return K.dropout(attention_probs, self.attention_probs_dropout_prob)
-            attention_probs = K.in_train_phase(dropped_inputs, inputs, training=training)
+            attention_probs = K.in_train_phase(dropped_inputs, attention_probs, training=training)
 
         context = K.batch_dot(attention_probs, value, axes=(3,2))
         context = K.permute_dimensions(context, pattern=(0,2,1,3))
