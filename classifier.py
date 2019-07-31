@@ -316,7 +316,7 @@ class TextSequence(Sequence):
 
 class Text_Classifier(object):
     def __init__(self, bert_config, pretrain_model_path, batch_size, seq_length, optimizer, num_classes, metrics=None,
-                 use_token_type=True, mask=True, max_predictions_per_seq=20, multi_gpu=None):
+                 use_token_type=True, mask=True, max_predictions_per_seq=20, multi_gpu=None, loss=None):
         if not isinstance(bert_config, BertConfig):
             raise ValueError("`bert_config` must be a instance of `BertConfig`")
         if multi_gpu:
@@ -330,16 +330,17 @@ class Text_Classifier(object):
         self.max_predictions_per_seq = max_predictions_per_seq
         self.mask = mask
         self.num_classes = num_classes
+        self.loss = loss or losses.categorical_crossentropy
 
         if multi_gpu:
             with tf.device('/cpu:0'):
                 model = self._build_model(pretrain_model_path)
-                model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy, metrics=metrics)
+                model.compile(optimizer=optimizer, loss=self.loss, metrics=metrics)
             parallel_model = multi_gpu_model(model=model, gpus=multi_gpu)
-            parallel_model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy, metrics=metrics)
+            parallel_model.compile(optimizer=optimizer, loss=self.loss, metrics=metrics)
         else:
             model = self._build_model(pretrain_model_path)
-            model.compile(optimizer=optimizer, loss=losses.categorical_crossentropy, metrics=metrics)
+            model.compile(optimizer=optimizer, loss=self.loss, metrics=metrics)
 
         self.estimator = model
         if multi_gpu:
