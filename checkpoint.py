@@ -2,7 +2,7 @@
 import warnings
 import numpy as np
 from keras.callbacks import Callback
-from sklearn.metrics import f1_score, classification_report
+from sklearn.metrics import f1_score, classification_report, precision_score, recall_score, accuracy_score
 
 
 class StepPreTrainModelCheckpoint(Callback):
@@ -363,6 +363,11 @@ class StepF1ModelCheckpoint(Callback):
                     val_pred = np.argmax(np.asarray(self.model.predict(x)), axis=1)
                     val_true = np.argmax(y, axis=1)
                     val_f1 = f1_score(val_true, val_pred, average='macro')
+                    val_precision = precision_score(val_true, val_pred, average='macro')
+                    val_recall = recall_score(val_true, val_pred, average='macro')
+                    val_acc = accuracy_score(val_true, val_pred)
+                    print('\nStep %07d: val_precision is %0.5f, val_recall is %0.5f,'
+                          ' accuracy is %0.5f' % (self.cur_step, val_precision, val_recall, val_acc))
                     threshold_value = 0.
 
                 filepath = self.filepath.format(step=self.cur_step, val_f1=val_f1, threshold=threshold_value)
